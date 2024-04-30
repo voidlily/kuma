@@ -25,6 +25,9 @@ jobs:
       - run: |
           git config --global user.email "110050114+kumahq[bot]@users.noreply.github.com"
           git config --global user.name "kumahq[bot]"
+      - id: latest-branch
+        run: |
+          echo "branch=$(make dev/print-latest-release-branch)" >> $GITHUB_OUTPUT
       - run: |
           make dev/merge-release
       - id: commit-changes
@@ -36,7 +39,7 @@ jobs:
             echo "changes=skipped" >> $GITHUB_OUTPUT
           else
             echo "commit changes"
-            git commit -s -m "chore(merge): latest release branch to master"
+            git commit -s -m "chore(merge): ${{ steps.latest-branch.outputs.branch }} branch to master"
             echo "changes=committed" >> $GITHUB_OUTPUT
           fi
       - name: Generate GitHub app token
@@ -49,12 +52,12 @@ jobs:
         uses: peter-evans/create-pull-request@9153d834b60caba6d51c9b9510b087acf9f33f83 # v6.0.4
         if: steps.commit-changes.outputs.changes == 'committed'
         with:
-          commit-message: "chore(merge): latest release branch to master"
+          commit-message: "chore(merge): ${{ steps.latest-branch.outputs.branch }} branch to master"
           signoff: true
           branch: chore/merge-release-to-master
           base: master
           delete-branch: true
-          title: "chore(merge): latest release branch to master"
+          title: "chore(merge): ${{ steps.latest-branch.outputs.branch }} branch to master"
           draft: false
           token: ${{ steps.github-app-token.outputs.token }}
           committer: kumahq[bot] <110050114+kumahq[bot]@users.noreply.github.com>
