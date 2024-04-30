@@ -16,13 +16,29 @@ jobs:
       - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v4.1.3
         with:
           ref: "master"
+          fetch-depth: 0
       - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
           go-version-file: go.mod
       - run: |
           make dev/tools
       - run: |
+          git config --global user.email "110050114+kumahq[bot]@users.noreply.github.com"
+          git config --global user.name "kumahq[bot]"
+      - run: |
           make dev/merge-release
+      - id: commit-changes
+        run: |
+          git status
+          # "git merge HEAD" is the way to check if merge is in progress
+          if git merge HEAD &> /dev/null; then
+            echo "skipping commit"
+            echo "changes=skipped" >> $GITHUB_OUTPUT
+          else
+            echo "commit changes"
+            git commit -s -m "chore(merge): latest release branch to master"
+            echo "changes=committed" >> $GITHUB_OUTPUT
+          fi
       - name: Generate GitHub app token
         id: github-app-token
         uses: actions/create-github-app-token@7bfa3a4717ef143a604ee0a99d859b8886a96d00 # v1.9.3
@@ -31,13 +47,14 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
       - name: "Create Pull Request"
         uses: peter-evans/create-pull-request@9153d834b60caba6d51c9b9510b087acf9f33f83 # v6.0.4
+        if: steps.commit-changes.outputs.changes == 'committed'
         with:
-          commit-message: "Merge release branch to master"
+          commit-message: "chore(merge): latest release branch to master"
           signoff: true
           branch: chore/merge-release-to-master
           base: master
           delete-branch: true
-          title: "Merge release branch to master"
+          title: "chore(merge): latest release branch to master"
           draft: false
           token: ${{ steps.github-app-token.outputs.token }}
           committer: kumahq[bot] <110050114+kumahq[bot]@users.noreply.github.com>
